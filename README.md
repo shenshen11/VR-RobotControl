@@ -114,7 +114,6 @@ d:/Code/
 │   ├── webrtc_server.py       # WebRTC 服务端
 │   ├── signaling_server.py    # 信令服务器
 │   ├── requirements.txt       # Python 依赖
-│   └── README.md             # 详细文档
 │
 ├── src/                       # VR 客户端源码
 │   ├── webrtc-client.js      # WebRTC 客户端
@@ -125,8 +124,8 @@ d:/Code/
 ├── package.json               # Node.js 依赖
 │
 ├── docs/
-│   ├── PROJECT_PLAN.md       # 项目计划和架构文档
-│   └── SIDE_BY_SIDE_GUIDE.md # Side-by-Side 方案详解
+│   ├── ROBOT_SCENE_CONTENT.md    # 仿真场景配置文档
+│   └── VIDEO_RENDERING_FLOW.md   # 视频流渲染流介绍文档
 │
 ├── README.md                 # 本文档
 ├── start-robot.bat           # 启动脚本（虚拟机器人）
