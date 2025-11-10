@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图层测试 - VR 立体渲染</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border: 1px solid #0f0;
+            z-index: 1000;
+            max-width: 600px;
+        }
+        #info h2 {
+            margin-top: 0;
+            color: #0ff;
+        }
+        #info pre {
+            background: #111;
+            padding: 10px;
+            overflow-x: auto;
+        }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        .warning { color: #ff0; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2>🔍 VR 图层诊断工具</h2>
+        <p>这个页面用于诊断 PICO VR 的图层系统问题</p>
+        <div id="status">正在初始化...</div>
+        <pre id="log"></pre>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
+
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+
+        function addLog(msg, type = 'info') {
+            const className = type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'success';
+            log.innerHTML += `<span class="${className}">${msg}</span>\n`;
+            console.log(msg);
+        }
+
+        // 创建场景
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x202020);
+
+        // 创建相机
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.6, 0);
+
+        // 创建渲染器
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // 添加 VR 按钮
+        document.body.appendChild(VRButton.createButton(renderer));
+
+        // 添加光照
+        const light = new THREE.AmbientLight(0xffffff, 1);
+        scene.add(light);
+
+        // 创建测试物体
+        // 图层 0 - 白色立方体（默认）
+        const cube0 = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, 0.5, 0.5),
+            new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        cube0.position.set(0, 1.6, -2);
+        cube0.layers.set(0);
+        scene.add(cube0);
+        addLog('✅ 创建图层 0 物体（白色立方体）');
+
+        // 图层 1 - 红色平面（左眼）
+        const plane1 = new THREE.Mesh(
+            new THREE.PlaneGeometry(1, 1),
+            new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide })
+        );
+        plane1.position.set(-1, 1.6, -2);
+        plane1.layers.set(1);
+        scene.add(plane1);
+        addLog('✅ 创建图层 1 物体（红色平面）');
+
+        // 图层 2 - 蓝色平面（右眼）
+        const plane2 = new THREE.Mesh(
+            new THREE.PlaneGeometry(1, 1),
+            new THREE.MeshBasicMaterial({ color: 0x0000ff, side: THREE.DoubleSide })
+        );
+        plane2.position.set(1, 1.6, -2);
+        plane2.layers.set(2);
+        scene.add(plane2);
+        addLog('✅ 创建图层 2 物体（蓝色平面）');
+
+        // 地板
+        const floor = new THREE.GridHelper(10, 20);
+        scene.add(floor);
+
+        let layersConfigured = false;
+
+        // VR 会话开始
+        renderer.xr.addEventListener('sessionstart', () => {
+            addLog('🥽 VR 会话已启动', 'success');
+            layersConfigured = false;
+        });
+
+        // 渲染循环
+        renderer.setAnimationLoop(() => {
+            // 配置图层
+            if (renderer.xr.isPresenting && !layersConfigured) {
+                const xrCamera = renderer.xr.getCamera();
+                
+                if (xrCamera && xrCamera.cameras && xrCamera.cameras.length >= 2) {
+                    addLog('📷 配置立体图层...', 'success');
+                    addLog(`   相机数量: ${xrCamera.cameras.length}`);
+                    
+                    // 左眼：图层 0 + 图层 1
+                    xrCamera.cameras[0].layers.disableAll();
+                    xrCamera.cameras[0].layers.enable(0);
+                    xrCamera.cameras[0].layers.enable(1);
+                    addLog(`   左眼图层掩码: ${xrCamera.cameras[0].layers.mask.toString(2).padStart(8, '0')}`);
+                    
+                    // 右眼：图层 0 + 图层 2
+                    xrCamera.cameras[1].layers.disableAll();
+                    xrCamera.cameras[1].layers.enable(0);
+                    xrCamera.cameras[1].layers.enable(2);
+                    addLog(`   右眼图层掩码: ${xrCamera.cameras[1].layers.mask.toString(2).padStart(8, '0')}`);
+                    
+                    addLog('✅ 图层配置完成', 'success');
+                    addLog('');
+                    addLog('📋 预期效果:', 'warning');
+                    addLog('   - 左眼应该看到: 白色立方体 + 红色平面');
+                    addLog('   - 右眼应该看到: 白色立方体 + 蓝色平面');
+                    addLog('   - 如果两只眼睛看到相同内容，说明图层系统失败');
+                    
+                    layersConfigured = true;
+                    status.innerHTML = '<span class="success">✅ 图层已配置，请检查 VR 中的显示</span>';
+                }
+            }
+            
+            renderer.render(scene, camera);
+        });
+
+        addLog('✅ 初始化完成');
+        addLog('👉 点击 "ENTER VR" 按钮开始测试');
+    </script>
+</body>
+</html>
+
