@@ -15,8 +15,7 @@
 - 👀 **真实立体视觉**：双目相机渲染，真实的深度感知
 - ⚡ **超低延迟**：WebRTC P2P 连接，端到端延迟 < 100ms
 - 🎮 **6DoF 控制**：实时传输头显和手柄的位置、旋转数据
-- 🤖 **物理仿真**：基于 PyBullet 的高精度物理模拟（240Hz）
-- 🌐 **跨平台**：支持 Meta Quest、Pico、HTC Vive 等主流 VR 设备
+- 🤖 **物理仿真**：基于 PyBullet 的高精度物理模拟
 - 🎯 **Side-by-Side 传输**：业界标准的立体视频格式，完美同步左右眼图像
 
 ---
@@ -129,7 +128,6 @@ d:/Code/
 │   ├── PROJECT_PLAN.md       # 项目计划和架构文档
 │   └── SIDE_BY_SIDE_GUIDE.md # Side-by-Side 方案详解
 │
-├── QUICKSTART.md             # 快速开始指南
 ├── README.md                 # 本文档
 ├── start-robot.bat           # 启动脚本（虚拟机器人）
 ├── test-sbs.bat              # 测试 Side-by-Side 方案
