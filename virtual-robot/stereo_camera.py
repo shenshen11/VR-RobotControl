@@ -32,41 +32,36 @@ class StereoCamera:
         self.projection_matrix = p.computeProjectionMatrixFOV(
             fov, aspect, near, far
         )
-        
-        print(f"✅ 虚拟双目相机初始化完成")
-        print(f"   - 分辨率: {width}x{height}")
-        print(f"   - 视场角: {fov}°")
-        print(f"   - 瞳距: {ipd*1000:.1f}mm")
     
     def render_stereo(self):
         """
         渲染双目图像
-        
+
         Returns:
             left_img: 左眼图像 (numpy array, BGR)
             right_img: 右眼图像 (numpy array, BGR)
         """
         # 获取机器人头部位置和朝向
         head_pos, head_orn = self.robot_sim.get_head_pose()
-        
+
         # 将四元数转换为旋转矩阵
         rotation_matrix = p.getMatrixFromQuaternion(head_orn)
         rotation_matrix = np.array(rotation_matrix).reshape(3, 3)
-        
+
         # 计算方向向量
         # PyBullet 的坐标系：X-前，Y-左，Z-上
         forward = rotation_matrix @ np.array([1, 0, 0])  # 前方
         up = rotation_matrix @ np.array([0, 0, 1])       # 上方
         right = rotation_matrix @ np.array([0, -1, 0])   # 右方（注意 Y 是左）
-        
+
         # 计算左眼位置（向左偏移 IPD/2）
         left_eye_pos = np.array(head_pos) - right * (self.ipd / 2)
         left_target = left_eye_pos + forward
-        
+
         # 计算右眼位置（向右偏移 IPD/2）
         right_eye_pos = np.array(head_pos) + right * (self.ipd / 2)
         right_target = right_eye_pos + forward
-        
+
         # 渲染左眼
         left_view_matrix = p.computeViewMatrix(
             cameraEyePosition=left_eye_pos.tolist(),
@@ -74,7 +69,7 @@ class StereoCamera:
             cameraUpVector=up.tolist()
         )
         left_img = self._render_image(left_view_matrix)
-        
+
         # 渲染右眼
         right_view_matrix = p.computeViewMatrix(
             cameraEyePosition=right_eye_pos.tolist(),
@@ -82,8 +77,25 @@ class StereoCamera:
             cameraUpVector=up.tolist()
         )
         right_img = self._render_image(right_view_matrix)
-        
+
         return left_img, right_img
+
+    def render_stereo_sbs(self):
+        """
+        渲染双目图像并拼接成 Side-by-Side 格式
+
+        Returns:
+            sbs_img: 左右并排的图像 (numpy array, BGR)
+                    格式: [左眼 | 右眼]
+                    尺寸: (height, width*2, 3)
+        """
+        # 渲染左右眼图像
+        left_img, right_img = self.render_stereo()
+
+        # 水平拼接：左眼在左，右眼在右
+        sbs_img = np.hstack([left_img, right_img])
+
+        return sbs_img
     
     def _render_image(self, view_matrix):
         """
@@ -117,7 +129,7 @@ class StereoCamera:
     def render_test_pattern(self):
         """
         渲染测试图案（用于调试）
-        
+
         Returns:
             left_img: 左眼测试图案
             right_img: 右眼测试图案
@@ -126,21 +138,36 @@ class StereoCamera:
         left_img = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         left_img[:, :] = (0, 0, 255)  # BGR 红色
         cv2.putText(
-            left_img, "LEFT EYE", 
-            (50, self.height // 2), 
-            cv2.FONT_HERSHEY_SIMPLEX, 
+            left_img, "LEFT EYE",
+            (50, self.height // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
             2, (255, 255, 255), 3
         )
-        
+
         # 右眼：蓝色背景
         right_img = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         right_img[:, :] = (255, 0, 0)  # BGR 蓝色
         cv2.putText(
-            right_img, "RIGHT EYE", 
-            (50, self.height // 2), 
-            cv2.FONT_HERSHEY_SIMPLEX, 
+            right_img, "RIGHT EYE",
+            (50, self.height // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
             2, (255, 255, 255), 3
         )
-        
+
         return left_img, right_img
+
+    def render_test_pattern_sbs(self):
+        """
+        渲染 Side-by-Side 测试图案（用于调试）
+
+        Returns:
+            sbs_img: 左右并排的测试图案
+        """
+        # 渲染左右眼测试图案
+        left_img, right_img = self.render_test_pattern()
+
+        # 水平拼接
+        sbs_img = np.hstack([left_img, right_img])
+
+        return sbs_img
 

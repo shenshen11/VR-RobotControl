@@ -4,13 +4,14 @@
  */
 
 export class WebRTCClient {
-    constructor(signalingUrl) {
+    constructor(signalingUrl, videoMode = 'sbs') {
         this.signalingUrl = signalingUrl;
+        this.videoMode = videoMode;  // 'sbs' 或 'dual'
         this.ws = null;
         this.pc = null;
         this.dataChannel = null;
         this.videoTracks = [];
-        
+
         // 回调函数
         this.onVideoTrack = null;
         this.onConnectionStateChange = null;
@@ -101,9 +102,16 @@ export class WebRTCClient {
         console.log('📝 创建 Offer...');
 
         // 添加 recvonly transceiver 来接收视频
-        // 这样可以避免 aiortc 的 direction 错误
-        this.pc.addTransceiver('video', { direction: 'recvonly' });
-        this.pc.addTransceiver('video', { direction: 'recvonly' });
+        if (this.videoMode === 'sbs') {
+            // Side-by-Side 模式：只需要一个视频轨道
+            this.pc.addTransceiver('video', { direction: 'recvonly' });
+            console.log('   - 添加 1 个 recvonly transceiver (Side-by-Side)');
+        } else {
+            // 双轨道模式：需要两个视频轨道
+            this.pc.addTransceiver('video', { direction: 'recvonly' });
+            this.pc.addTransceiver('video', { direction: 'recvonly' });
+            console.log('   - 添加 2 个 recvonly transceiver (双轨道)');
+        }
 
         const offer = await this.pc.createOffer();
         await this.pc.setLocalDescription(offer);
@@ -138,10 +146,16 @@ export class WebRTCClient {
     }
     
     getVideoStreams() {
-        return {
-            left: this.videoTracks[0],
-            right: this.videoTracks[1]
-        };
+        if (this.videoMode === 'sbs') {
+            // Side-by-Side 模式：返回单个视频流
+            return this.videoTracks[0];
+        } else {
+            // 双轨道模式：返回左右眼视频流
+            return {
+                left: this.videoTracks[0],
+                right: this.videoTracks[1]
+            };
+        }
     }
     
     close() {

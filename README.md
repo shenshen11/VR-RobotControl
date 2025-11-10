@@ -17,6 +17,7 @@
 - 🎮 **6DoF 控制**：实时传输头显和手柄的位置、旋转数据
 - 🤖 **物理仿真**：基于 PyBullet 的高精度物理模拟（240Hz）
 - 🌐 **跨平台**：支持 Meta Quest、Pico、HTC Vive 等主流 VR 设备
+- 🎯 **Side-by-Side 传输**：业界标准的立体视频格式，完美同步左右眼图像
 
 ---
 
@@ -71,12 +72,25 @@ npm install
 #### 方式 2: 手动启动
 
 ```bash
-# 终端 1: 启动虚拟机器人服务器
+# 终端 1: 启动虚拟机器人服务器（Side-by-Side 模式，默认）
 cd virtual-robot
 python main.py
 
+# 或者使用双轨道模式
+python main.py --video-mode dual
+
 # 终端 2: 启动 VR 客户端
 npm run dev
+```
+
+#### 测试 Side-by-Side 方案
+
+```bash
+# 使用测试图案验证立体视频
+双击 test-sbs.bat
+
+# 对比：使用双轨道模式
+双击 test-dual.bat
 ```
 
 ### 进入 VR
@@ -112,11 +126,14 @@ d:/Code/
 ├── package.json               # Node.js 依赖
 │
 ├── docs/
-│   └── PROJECT_PLAN.md       # 项目计划和架构文档
+│   ├── PROJECT_PLAN.md       # 项目计划和架构文档
+│   └── SIDE_BY_SIDE_GUIDE.md # Side-by-Side 方案详解
 │
 ├── QUICKSTART.md             # 快速开始指南
 ├── README.md                 # 本文档
 ├── start-robot.bat           # 启动脚本（虚拟机器人）
+├── test-sbs.bat              # 测试 Side-by-Side 方案
+├── test-dual.bat             # 测试双轨道方案
 └── start-client.bat          # 启动脚本（VR 客户端）
 ```
 
@@ -176,103 +193,4 @@ d:/Code/
 │  │  - 接收: 控制数据                │   │
 │  └─────────────────────────────────┘   │
 └─────────────────────────────────────────┘
-```
-
----
-
-## 📊 性能指标
-
-| 指标 | 目标值 | 实际值 |
-|------|--------|--------|
-| 视频延迟 | < 100ms | ~50-80ms (局域网) |
-| 视频帧率 | 30 fps | 30 fps |
-| 控制频率 | 60 Hz | 60 Hz |
-| 物理仿真 | 240 Hz | 240 Hz |
-| 视频分辨率 | 640x480 | 可调节 |
-
----
-
-## 🎯 下一步开发
-
-### 短期（1-2天）
-- [ ] 添加性能监控面板
-- [ ] 实现手臂控制（逆运动学）
-- [ ] 添加虚拟手部模型
-- [ ] 支持手柄震动反馈
-
-### 中期（1周）
-- [ ] 集成更复杂的机器人模型
-- [ ] 实现物体抓取交互
-- [ ] 添加虚拟环境
-- [ ] 优化视频编码
-
-### 长期（未来）
-- [ ] 对接真实机器人硬件
-- [ ] ROS2 集成
-- [ ] 多用户协作
-- [ ] 云端部署
-
----
-
-## 🔧 故障排除
-
-遇到问题？查看详细的故障排除指南：
-
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - 完整的故障排除文档
-- **[QUICKSTART.md](QUICKSTART.md)** - 快速开始指南中的常见问题
-
-### 快速修复
-
-#### ✅ 所有已知问题已修复
-
-1. **WebSocket Handler 错误** - 已修复
-2. **ICE Candidate 格式错误** - 已修复
-3. **Transceiver Direction 错误** - 已修复
-
-查看详细修复历史：[FIXES.md](FIXES.md)
-
-#### 如果遇到问题
-
-```bash
-# 1. 确保使用最新代码
-git pull  # 如果使用 git
-
-# 2. 重启服务
-# 虚拟机器人端
-cd virtual-robot
-python main.py
-
-# VR 客户端（新终端）
-npm run dev
-```
-
----
-
-## 📚 文档
-
-- **快速开始**: [QUICKSTART.md](QUICKSTART.md)
-- **详细文档**: [virtual-robot/README.md](virtual-robot/README.md)
-- **项目计划**: [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)
-
----
-
-## 📝 许可证
-
-MIT License
-
----
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
----
-
-## 👨‍💻 作者
-
-由 Augment Agent 开发
-
----
-
-**开始你的 VR 机器人之旅吧！🚀**
 

@@ -129,6 +129,7 @@ function getSignalingServer() {
 
 const SIGNALING_SERVER = getSignalingServer();
 const SEND_INTERVAL = 16; // 60Hz 发送频率
+const VIDEO_MODE = 'sbs'; // 'sbs' (Side-by-Side) 或 'dual' (双轨道)
 
 // 全局变量
 let webrtcClient = null;
@@ -178,34 +179,45 @@ async function init() {
 
         // 2. 创建 WebRTC 客户端
         showStatus(`🌐 连接到虚拟机器人服务器 (${SIGNALING_SERVER})...`, 'info');
-        webrtcClient = new WebRTCClient(SIGNALING_SERVER);
+        webrtcClient = new WebRTCClient(SIGNALING_SERVER, VIDEO_MODE);
 
         // 监听视频轨道
-        let receivedStreams = [];
-        webrtcClient.onVideoTrack = (stream) => {
-            receivedStreams.push(stream);
-            showStatus(`📹 收到视频轨道 ${receivedStreams.length}/2`, 'info');
+        if (VIDEO_MODE === 'sbs') {
+            // Side-by-Side 模式：只接收一个视频轨道
+            webrtcClient.onVideoTrack = (stream) => {
+                showStatus('📹 收到 Side-by-Side 视频轨道', 'info');
+                vrScene.setupStereoVideoSBS(stream);
+                isConnected = true;
+                showStatus('✅ Side-by-Side 视频流已连接！可以进入 VR 了', 'success');
+            };
+        } else {
+            // 双轨道模式：接收两个视频轨道并识别
+            let receivedStreams = [];
+            webrtcClient.onVideoTrack = (stream) => {
+                receivedStreams.push(stream);
+                showStatus(`📹 收到视频轨道 ${receivedStreams.length}/2`, 'info');
 
-            // 当收到两个视频轨道时，识别并设置立体视频
-            if (receivedStreams.length === 2) {
-                showStatus('🔍 正在识别左右眼视频流...', 'info');
+                // 当收到两个视频轨道时，识别并设置立体视频
+                if (receivedStreams.length === 2) {
+                    showStatus('🔍 正在识别左右眼视频流...', 'info');
 
-                // 识别哪个是左眼，哪个是右眼
-                identifyEyeStreams(receivedStreams[0], receivedStreams[1])
-                    .then(({ leftStream, rightStream }) => {
-                        vrScene.setupStereoVideo(leftStream, rightStream);
-                        isConnected = true;
-                        showStatus('✅ 双目视频流已连接！可以进入 VR 了', 'success');
-                    })
-                    .catch(error => {
-                        console.error('❌ 识别视频流失败:', error);
-                        showStatus('❌ 识别视频流失败，使用默认顺序', 'error');
-                        // 失败时使用默认顺序
-                        vrScene.setupStereoVideo(receivedStreams[0], receivedStreams[1]);
-                        isConnected = true;
-                    });
-            }
-        };
+                    // 识别哪个是左眼，哪个是右眼
+                    identifyEyeStreams(receivedStreams[0], receivedStreams[1])
+                        .then(({ leftStream, rightStream }) => {
+                            vrScene.setupStereoVideo(leftStream, rightStream);
+                            isConnected = true;
+                            showStatus('✅ 双目视频流已连接！可以进入 VR 了', 'success');
+                        })
+                        .catch(error => {
+                            console.error('❌ 识别视频流失败:', error);
+                            showStatus('❌ 识别视频流失败，使用默认顺序', 'error');
+                            // 失败时使用默认顺序
+                            vrScene.setupStereoVideo(receivedStreams[0], receivedStreams[1]);
+                            isConnected = true;
+                        });
+                }
+            };
+        }
 
         // 监听连接状态
         webrtcClient.onConnectionStateChange = (state) => {

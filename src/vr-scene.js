@@ -5,6 +5,7 @@
 
 import * as THREE from 'three';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
+import { StereoVideoShaderSBS } from './stereo-shader.js';
 
 export class VRScene {
     constructor() {
@@ -219,6 +220,151 @@ export class VRScene {
         console.log('✅ 双目视频设置完成');
     }
 
+    setupStereoVideoSBS(stream) {
+        console.log('🎬 设置 Side-by-Side 双目视频流...');
+
+        // 创建视频元素
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.muted = true;
+        video.play().catch(e => console.error('视频播放失败:', e));
+
+        // 监听视频元数据加载
+        video.addEventListener('loadedmetadata', () => {
+            console.log(`📹 Side-by-Side 视频: ${video.videoWidth}x${video.videoHeight}`);
+        });
+
+        // 定期检查视频播放状态
+        setInterval(() => {
+            if (this.renderer.xr.isPresenting) {
+                console.log('🎥 视频状态:');
+                console.log(`   - Side-by-Side: ${video.paused ? '暂停' : '播放'}, 时间: ${video.currentTime.toFixed(2)}s`);
+            }
+        }, 5000); // 每 5 秒检查一次
+
+        // 创建视频纹理
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+        videoTexture.format = THREE.RGBFormat;
+
+        // 保存纹理引用
+        this.videoTexture = videoTexture;
+
+        // 🔑 关键修复：让视频填满整个视野
+        // PyBullet 相机 FOV = 90°，所以我们需要匹配这个视场角
+
+        // 方案：将屏幕放置在相机正前方，尺寸刚好填满 90° 视场角
+        const distance = 0.5;  // 屏幕距离相机 0.5 米（更近，更沉浸）
+        const fov = 90;        // 视场角 90 度（匹配 PyBullet 相机）
+
+        // 计算屏幕尺寸：tan(fov/2) * distance * 2
+        const screenWidth = 2 * Math.tan((fov * Math.PI / 180) / 2) * distance;
+        const screenHeight = screenWidth * (480 / 640);  // 保持 4:3 比例
+
+        // 创建更大的平面几何体，确保填满视野
+        const geometry = new THREE.PlaneGeometry(screenWidth * 1.2, screenHeight * 1.2);
+
+        // 左眼屏幕 - 使用 Shader Material
+        const leftMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                videoTexture: { value: videoTexture },
+                eyeIndex: { value: 0 }  // 左眼
+            },
+            vertexShader: StereoVideoShaderSBS.vertexShader,
+            fragmentShader: StereoVideoShaderSBS.fragmentShader,
+            depthTest: false,
+            depthWrite: false
+        });
+
+        this.leftScreen = new THREE.Mesh(geometry, leftMaterial);
+        // 🔑 关键修复：不设置固定位置，而是在渲染循环中跟随相机
+        this.leftScreen.renderOrder = -1;  // 在最前面渲染（背景）
+        this.leftScreen.layers.set(1);
+        // 暂时不添加到场景，等 VR 会话开始后再添加
+
+        // 右眼屏幕 - 使用 Shader Material
+        const rightMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                videoTexture: { value: videoTexture },
+                eyeIndex: { value: 1 }  // 右眼
+            },
+            vertexShader: StereoVideoShaderSBS.vertexShader,
+            fragmentShader: StereoVideoShaderSBS.fragmentShader,
+            depthTest: false,
+            depthWrite: false
+        });
+
+        this.rightScreen = new THREE.Mesh(geometry, rightMaterial);
+        // 🔑 关键修复：不设置固定位置，而是在渲染循环中跟随相机
+        this.rightScreen.renderOrder = -1;  // 在最前面渲染（背景）
+        this.rightScreen.layers.set(2);
+        // 暂时不添加到场景，等 VR 会话开始后再添加
+
+        // 保存距离参数，用于后续更新位置
+        this.screenDistance = distance;
+
+        console.log('📺 Side-by-Side 视频屏幕已创建');
+        console.log(`   - 屏幕尺寸: ${screenWidth.toFixed(2)}m x ${screenHeight.toFixed(2)}m (放大 1.2 倍)`);
+        console.log(`   - 距离: ${distance}m (更近，更沉浸)`);
+        console.log(`   - 视场角: ${fov}° (匹配 PyBullet 相机)`);
+        console.log('   - 左眼: 图层 1 (采样左半部分), 右眼: 图层 2 (采样右半部分)');
+
+        // 监听 VR 会话开始
+        this.renderer.xr.addEventListener('sessionstart', () => {
+            console.log('🥽 VR 会话已启动');
+            this.layersConfigured = false;
+        });
+
+        console.log('✅ Side-by-Side 双目视频设置完成');
+    }
+
+    updateVideoScreenPositions() {
+        /**
+         * 🔑 关键方法：更新视频屏幕位置，使其跟随 VR 相机
+         *
+         * 问题：如果屏幕固定在世界坐标 (0, 0, -0.5)，当用户头部高度不是 0 时，
+         *      屏幕会显得在脚下或头顶
+         *
+         * 解决方案：每帧更新屏幕位置，使其始终在相机正前方
+         */
+        if (!this.leftScreen || !this.rightScreen) return;
+        if (!this.renderer.xr.isPresenting) return;
+
+        const xrCamera = this.renderer.xr.getCamera();
+        if (!xrCamera) return;
+
+        // 确保屏幕已添加到场景
+        if (!this.leftScreen.parent) {
+            this.scene.add(this.leftScreen);
+            this.scene.add(this.rightScreen);
+            console.log('📺 视频屏幕已添加到场景');
+        }
+
+        // 获取相机的世界位置和方向
+        const cameraPosition = new THREE.Vector3();
+        const cameraQuaternion = new THREE.Quaternion();
+        xrCamera.getWorldPosition(cameraPosition);
+        xrCamera.getWorldQuaternion(cameraQuaternion);
+
+        // 计算相机正前方的位置（-Z 方向）
+        const forward = new THREE.Vector3(0, 0, -1);
+        forward.applyQuaternion(cameraQuaternion);
+        forward.multiplyScalar(this.screenDistance);
+
+        // 设置屏幕位置：相机位置 + 前方偏移
+        const screenPosition = cameraPosition.clone().add(forward);
+
+        this.leftScreen.position.copy(screenPosition);
+        this.rightScreen.position.copy(screenPosition);
+
+        // 设置屏幕朝向：面向相机
+        this.leftScreen.quaternion.copy(cameraQuaternion);
+        this.rightScreen.quaternion.copy(cameraQuaternion);
+    }
+
     configureStereoLayers() {
         // 配置立体图层
         if (this.layersConfigured) return;
@@ -355,10 +501,11 @@ export class VRScene {
     startRenderLoop(onFrame) {
         console.log('🔄 启动渲染循环...');
 
-        this.renderer.setAnimationLoop((timestamp, frame) => {
-            // 在 VR 模式下配置立体图层
+        this.renderer.setAnimationLoop((_timestamp, frame) => {
+            // 在 VR 模式下配置立体图层和更新屏幕位置
             if (this.renderer.xr.isPresenting) {
                 this.configureStereoLayers();
+                this.updateVideoScreenPositions();  // 🔑 更新视频屏幕位置
             }
 
             if (onFrame) {

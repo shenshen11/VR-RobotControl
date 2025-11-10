@@ -1,168 +1,289 @@
-# 🤖 VR 虚拟机器人遥操作系统
+# 🤖 Virtual Robot VR Teleoperation System
 
-基于 WebXR 和 WebRTC 的虚拟机器人远程控制系统。
+A real-time virtual robot teleoperation system using WebXR and WebRTC, enabling VR headset users to control and view through a simulated robot's stereo vision.
 
-## 📋 系统架构
+## ✨ Features
+
+- **Stereo Vision Rendering**: Real-time dual-camera rendering from robot's perspective using PyBullet
+- **WebRTC Streaming**: Low-latency video streaming with Side-by-Side or dual-track modes
+- **VR Control**: Head tracking and controller input support via WebXR
+- **Physics Simulation**: 240Hz physics simulation for realistic robot behavior
+- **Flexible Configuration**: Adjustable resolution, framerate, and video modes
+
+## 📋 System Architecture
 
 ```
-VR 客户端 (浏览器)  ←→  WebRTC  ←→  虚拟机器人服务器 (Python + PyBullet)
+VR Client (Browser) ←→ WebRTC ←→ Virtual Robot Server (Python + PyBullet)
+     WebXR                           Physics Simulation
+  Three.js                           Stereo Camera
+                                     WebSocket Signaling
 ```
 
-- **VR 客户端**: Three.js + WebXR，运行在 VR 头显的浏览器中
-- **虚拟机器人**: PyBullet 物理仿真 + 双目相机渲染
-- **通信**: WebRTC 实时视频流 + 控制数据传输
+**Components:**
+- **VR Client**: Three.js + WebXR running in VR headset browser
+- **Virtual Robot**: PyBullet physics simulation + stereo camera rendering
+- **Communication**: WebRTC for real-time video + WebSocket for signaling
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 1. 安装依赖
+### Prerequisites
 
-#### 虚拟机器人端 (Python)
+- Python 3.8+
+- Node.js 16+
+- VR headset with WebXR support (Meta Quest, etc.)
 
+### 1. Install Dependencies
+
+**Virtual Robot Server (Python):**
 ```bash
 cd virtual-robot
 pip install -r requirements.txt
 ```
 
-#### VR 客户端 (Node.js)
-
+**VR Client (Node.js):**
 ```bash
 cd ..
 npm install
 ```
 
-### 2. 启动虚拟机器人服务器
+### 2. Generate SSL Certificate
+
+WebXR requires HTTPS. Generate a self-signed certificate:
 
 ```bash
 cd virtual-robot
+python generate_cert.py
+```
+
+Or use the provided utility script that auto-generates certificates:
+```bash
+python -c "from generate_cert import generate_certificate; generate_certificate()"
+```
+
+### 3. Start Virtual Robot Server
+
+```bash
 python main.py
 ```
 
-**可选参数**：
-- `--gui`: 显示 PyBullet GUI（调试用）
-- `--fps 30`: 设置视频帧率（默认 30）
-- `--width 640`: 设置视频宽度（默认 640）
-- `--height 480`: 设置视频高度（默认 480）
+**Command Line Options:**
+- `--gui`: Show PyBullet GUI (for debugging)
+- `--fps 30`: Set video framerate (default: 30)
+- `--width 640`: Set video width (default: 640)
+- `--height 480`: Set video height (default: 480)
+- `--no-ssl`: Disable SSL (use WS instead of WSS)
+- `--test-pattern`: Use test pattern (red/blue for debugging stereo)
+- `--video-mode sbs|dual`: Video mode (default: sbs)
 
-**示例**：
+**Examples:**
 ```bash
-# 显示 GUI，60fps，高分辨率
-python main.py --gui --fps 60 --width 1280 --height 720
+# High resolution, 60fps
+python main.py --fps 60 --width 1280 --height 720
+
+# Debug mode with GUI and test pattern
+python main.py --gui --test-pattern
+
+# Dual track mode (separate left/right streams)
+python main.py --video-mode dual
 ```
 
-### 3. 启动 VR 客户端
+### 4. Start VR Client
 
-在**另一个终端**中：
+In a **separate terminal**:
 
 ```bash
 npm run dev
 ```
 
-### 4. 进入 VR
+### 5. Enter VR
 
-1. 用 VR 头显的浏览器访问: `https://localhost:5173`
-2. 等待连接成功提示
-3. 点击 "ENTER VR" 按钮
-4. 移动头部和手柄，观察虚拟机器人服务器的控制台输出
+1. Open VR headset browser and navigate to: `https://localhost:5173`
+2. Accept the self-signed certificate warning
+3. Wait for WebRTC connection to establish
+4. Click "ENTER VR" button
+5. Move your head and controllers to control the robot
 
-## 📊 预期效果
+## 📊 What to Expect
 
-### VR 头显中
-- 看到虚拟机器人"眼睛"看到的 3D 世界
-- 左右眼分别显示不同视角（立体视觉）
-- 场景中有彩色立方体和地面
+### In VR Headset
+- Real-time stereo vision from robot's perspective
+- Separate left/right eye views for depth perception
+- Simulated environment with colored cubes and ground plane
+- Smooth head tracking with robot camera following your movements
 
-### 虚拟机器人服务器控制台
-```
-📍 头显 - 位置: (0.00, 1.60, 0.00), 旋转: (0.00, 0.00, 0.00, 1.00)
-🎮 left 手柄 - 位置: (-0.20, 1.40, -0.30), 扳机: 0.00, 握持: 0.00, 摇杆: (0.00, 0.00)
-🎮 right 手柄 - 位置: (0.20, 1.40, -0.30), 扳机: 0.50, 握持: 0.00, 摇杆: (0.00, 0.00)
-```
+### Performance
+- **Video**: 30-60 fps (configurable)
+- **Physics**: 240 Hz simulation
+- **Latency**: ~50-100ms (local network)
+- **Resolution**: 640x480 to 1920x1080 per eye (configurable)
 
-## 🛠️ 技术栈
+## 🛠️ Technology Stack
 
-### 虚拟机器人端
-- **Python 3.8+**
-- **PyBullet**: 物理仿真和渲染
-- **aiortc**: WebRTC 实现
-- **OpenCV**: 图像处理
-- **WebSockets**: 信令服务器
+### Server Side (Python)
+- **PyBullet** - Physics simulation and rendering engine
+- **aiortc** - WebRTC implementation for Python
+- **OpenCV** - Image processing and format conversion
+- **websockets** - WebSocket server for signaling
+- **asyncio** - Asynchronous I/O for concurrent operations
 
-### VR 客户端
-- **Three.js**: 3D 渲染引擎
-- **WebXR Device API**: VR 设备接口
-- **WebRTC API**: 实时通信
-- **Vite**: 开发服务器
+### Client Side (JavaScript)
+- **Three.js** - 3D rendering engine
+- **WebXR Device API** - VR headset interface
+- **WebRTC API** - Real-time video streaming
+- **Vite** - Development server and build tool
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```
 virtual-robot/
-├── main.py                 # 主入口
-├── robot_sim.py            # PyBullet 仿真
-├── stereo_camera.py        # 虚拟双目相机
-├── webrtc_server.py        # WebRTC 服务端
-├── signaling_server.py     # 信令服务器
-├── requirements.txt        # Python 依赖
-└── README.md              # 本文档
+├── main.py                 # Main entry point and server orchestration
+├── robot_sim.py            # PyBullet robot simulation
+├── stereo_camera.py        # Virtual stereo camera rendering
+├── webrtc_server.py        # WebRTC server implementation
+├── signaling_server.py     # WebSocket signaling server
+├── generate_cert.py        # SSL certificate generation utility
+├── requirements.txt        # Python dependencies
+├── .gitignore             # Git ignore rules
+└── README.md              # This file
 
-../  (VR 客户端)
+../ (VR Client - parent directory)
 ├── src/
-│   ├── webrtc-client.js   # WebRTC 客户端
-│   └── vr-scene.js        # VR 场景
-├── main.js                # 主入口
-├── index.html             # HTML 页面
-└── package.json           # Node.js 依赖
+│   ├── webrtc-client.js   # WebRTC client implementation
+│   └── vr-scene.js        # VR scene and rendering
+├── main.js                # Client entry point
+├── index.html             # HTML page
+└── package.json           # Node.js dependencies
 ```
 
-## 🔧 故障排除
+## 🔧 Troubleshooting
 
-### 问题 1: WebRTC 连接失败
+### WebRTC Connection Issues
 
-**检查**：
-1. 确保虚拟机器人服务器正在运行
-2. 检查防火墙是否阻止了 8080 端口
-3. 查看浏览器控制台的错误信息
+**Symptoms**: Client can't connect to server, connection timeout
 
-### 问题 2: 看不到视频流
+**Solutions**:
+1. Ensure server is running: `python main.py`
+2. Check firewall allows port 8080
+3. Verify SSL certificate is generated: `ls cert.pem key.pem`
+4. Check browser console for detailed error messages
+5. Try disabling SSL: `python main.py --no-ssl` (not recommended for production)
 
-**检查**：
-1. 确认 WebRTC 连接状态为 "connected"
-2. 检查浏览器是否支持 WebRTC
-3. 尝试降低分辨率和帧率
+### No Video Stream
 
-### 问题 3: PyBullet 导入失败
+**Symptoms**: Connected but black screen in VR
 
-**解决**：
+**Solutions**:
+1. Verify WebRTC connection state is "connected"
+2. Try test pattern mode: `python main.py --test-pattern`
+3. Lower resolution/framerate: `python main.py --fps 15 --width 320 --height 240`
+4. Check browser WebRTC support (Chrome/Edge recommended)
+
+### PyBullet Installation Issues
+
+**Windows**:
 ```bash
 pip install --upgrade pybullet
 ```
 
-### 问题 4: aiortc 安装失败
-
-**Windows 用户**：
+**Linux**:
 ```bash
-# 需要先安装 Visual C++ Build Tools
-# 下载: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+sudo apt-get install python3-dev
+pip install pybullet
 ```
 
-**Linux 用户**：
+**macOS**:
 ```bash
-sudo apt-get install libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libavresample-dev libavfilter-dev
+pip install pybullet
 ```
 
-## 🎯 下一步开发
+### aiortc Installation Issues
 
-- [ ] 实现逆运动学，用手柄控制机器人手臂
-- [ ] 添加性能监控（帧率、延迟）
-- [ ] 支持更多机器人模型（URDF）
-- [ ] 添加虚拟环境交互（抓取物体）
-- [ ] 对接真实机器人硬件
+**Windows**:
+- Install Visual C++ Build Tools: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+- Then: `pip install aiortc`
 
-## 📝 许可证
+**Linux (Ubuntu/Debian)**:
+```bash
+sudo apt-get install libavformat-dev libavcodec-dev libavdevice-dev \
+    libavutil-dev libswscale-dev libavfilter-dev libopus-dev \
+    libvpx-dev pkg-config
+pip install aiortc
+```
 
-MIT License
+**macOS**:
+```bash
+brew install ffmpeg opus libvpx pkg-config
+pip install aiortc
+```
 
-## 🤝 贡献
+### Certificate Warnings
 
-欢迎提交 Issue 和 Pull Request！
+**Symptom**: Browser shows "Your connection is not private"
+
+**Solution**: This is expected with self-signed certificates. Click "Advanced" → "Proceed to localhost" (or similar). For production, use a proper SSL certificate from Let's Encrypt or similar CA.
+
+## 🎯 Roadmap
+
+- [ ] Inverse kinematics for arm control via VR controllers
+- [ ] Performance monitoring (FPS, latency, bandwidth)
+- [ ] Support for custom robot models (URDF import)
+- [ ] Object interaction and manipulation
+- [ ] Multi-user support
+- [ ] Recording and playback of teleoperation sessions
+- [ ] Integration with real robot hardware
+- [ ] Advanced physics interactions (grasping, force feedback)
+
+## 🔬 Technical Details
+
+### Video Modes
+
+**Side-by-Side (SBS) Mode** (Default):
+- Single video track with left/right images concatenated horizontally
+- Resolution: `width*2 x height`
+- Pros: Perfect synchronization, simpler client code
+- Cons: Higher bandwidth per track
+
+**Dual Track Mode**:
+- Separate video tracks for left and right eyes
+- Resolution: `width x height` per track
+- Pros: Better compression, standard WebRTC approach
+- Cons: Potential sync issues, track order uncertainty
+
+### Camera Configuration
+
+- **IPD (Interpupillary Distance)**: 64mm (configurable)
+- **FOV (Field of View)**: 90° (configurable)
+- **Near Plane**: 0.01m
+- **Far Plane**: 100m
+
+### Network Requirements
+
+- **Bandwidth**: ~5-20 Mbps depending on resolution and FPS
+- **Latency**: <100ms recommended for good experience
+- **Protocol**: WebRTC (UDP-based) for video, WebSocket for signaling
+
+## 📝 License
+
+MIT License - see LICENSE file for details
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📧 Contact
+
+For questions or issues, please open an issue on GitHub.
+
+## 🙏 Acknowledgments
+
+- PyBullet for physics simulation
+- aiortc for Python WebRTC implementation
+- Three.js for VR rendering
+- WebXR community for standards and examples
 
