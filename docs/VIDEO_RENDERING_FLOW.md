@@ -410,8 +410,6 @@ configureStereoLayers() {
    立体视觉效果 ✨
 ```
 
----
-
 ## 🔧 关键技术点
 
 ### 1. **瞳距（IPD）计算**
@@ -433,62 +431,6 @@ configureStereoLayers() {
 - 子相机独立配置可见图层
 - 实现左右眼分离渲染
 
----
-
-## 📊 性能指标
-
-| 指标 | 数值 |
-|------|------|
-| **渲染分辨率** | 640×480 (每眼) |
-| **传输分辨率** | 1280×480 (SBS) |
-| **帧率** | 30 fps (可配置到 60 fps) |
-| **延迟** | < 100ms (端到端) |
-| **带宽** | ~2-5 Mbps (取决于编码) |
-| **物理仿真频率** | 240 Hz |
-
----
-
-## 🎨 视觉效果
-
-用户在 VR 头显中看到的效果：
-
-1. **立体深度感**：由于左右眼视差，物体有明显的 3D 深度
-2. **机器人视角**：从机器人头部位置观察世界
-3. **彩色立方体**：环绕在周围的红、绿、蓝、黄色立方体
-4. **地面**：PyBullet 渲染的地面平面
-5. **实时响应**：头部转动时，视角实时跟随
-
----
-
-## 🔍 调试技巧
-
-### 查看视频流状态
-```javascript
-// 在浏览器控制台
-console.log('视频尺寸:', video.videoWidth, 'x', video.videoHeight);
-console.log('视频播放:', !video.paused);
-console.log('当前时间:', video.currentTime);
-```
-
-### 查看图层配置
-```javascript
-// 在 VR 会话中
-const xrCamera = renderer.xr.getCamera();
-console.log('左眼图层:', xrCamera.cameras[0].layers.mask);
-console.log('右眼图层:', xrCamera.cameras[1].layers.mask);
-```
-
-### 测试图案模式
-```bash
-# 启动测试图案
-python main.py --test-pattern
-
-# 应该看到：
-# 左眼：红色背景 + "LEFT EYE"
-# 右眼：蓝色背景 + "RIGHT EYE"
-```
-
----
 
 ## 📚 相关文件
 
