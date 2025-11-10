@@ -94,12 +94,10 @@ npm run dev
 
 ### 进入 VR
 
-1. 用 VR 头显的浏览器访问: `https://localhost:5173`
+1. 用 VR 头显的浏览器访问
 2. 等待连接成功提示
 3. 点击 "ENTER VR" 按钮
 4. 移动头部和手柄
-
-**详细步骤**: 查看 [QUICKSTART.md](QUICKSTART.md)
 
 ---
 
